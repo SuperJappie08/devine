@@ -4,7 +4,7 @@
 # Developed on Ubuntu 24.04
 #
 # Author: Jasper van Brakel
-# Date: 31 May 2026
+# Date: 6 November 2026
 # License: Apache-2.0
 
 export DEVINE_VERSION="0.0.0-dev"
