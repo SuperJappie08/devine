@@ -9,10 +9,14 @@
 
 export DEVINE_VERSION="0.0.0-dev"
 
+function use-color() {
+	[[ -z $NO_COLOR ]]
+}
+
 function usage() {
 	local reset blue
 
-	if [[ -z $NO_COLOR ]]; then
+	if use-color; then
 		reset=$(tput sgr0 2>/dev/null)
 		blue=$(tput setaf 6 2>/dev/null)
 	fi
@@ -28,6 +32,18 @@ function usage() {
 }
 
 function main() {
+	local red reset
+
+	if use-color; then
+		reset=$(tput sgr0 2>/dev/null)
+		red=$(tput setaf 1 bold 2>/dev/null)
+	fi
+
+	if ! which devcontainer &>/dev/null; then
+		echo "${red}[ERROR]${reset} devcontainer executable is required!"
+		exit 99
+	fi
+
 	local cmd=$1
 	shift
 	case "$cmd" in
