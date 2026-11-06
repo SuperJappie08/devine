@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# devine - a friendly wrapper around devcontainer-cli
+#
+# Developed on Ubuntu 24.04
+#
+# Author: Jasper van Brakel
+# Date: 31 May 2026
+# License: Apache-2.0
+
+export DEVINE_VERSION="0.0.0-dev"
+
+function usage() {
+	local reset blue
+
+	if [[ -z $NO_COLOR ]]; then
+		reset=$(tput sgr0 2>/dev/null)
+		blue=$(tput setaf 6 2>/dev/null)
+	fi
+
+	cat <<-EOF
+		${blue}devine$reset - A better devcontainer-cli interface - ($DEVINE_VERSION)
+		Usage: devine [command] [args...]
+
+		Subcommands:
+		    ${blue}devine version$reset
+		      print the version number of devine and exit
+	EOF
+}
+
+function main() {
+	local cmd=$1
+	shift
+	case "$cmd" in
+		-v | v | version) echo "$DEVINE_VERSION" ;;
+		*)
+			usage >&2
+			exit 1
+			;;
+	esac
+}
+
+# Do not execute when not being sourced
+if ! (return 0 2>/dev/null); then
+	main "$@"
+fi
