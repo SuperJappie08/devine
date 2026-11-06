@@ -13,6 +13,35 @@ function use-color() {
 	[[ -z $NO_COLOR ]]
 }
 
+function read-configuration {
+	# TODO(SuperJappie08): Flags to implement
+	#  - --workspace-folder
+	#  - --container-id
+	#  - ? --id-label ?
+	#  - --config
+	#  - --override-config
+	#  - --include-features-configuration
+	#  - --include-merged-configuration
+	#  - --additional-features
+	local container_config exit_code
+	container_config="$(devcontainer read-configuration "$@")"
+	exit_code=$?
+
+	# TODO(SuperJappie08): Color here
+	if ((exit_code)); then
+		echo "[ERROR] devcontainer cli failed!"
+		printf "%s\n" "$container_config"
+		exit $exit_code
+	fi
+
+	container_config=$(echo "$container_config" | tail -n +2)
+	if which jq &>/dev/null; then
+		echo "$container_config" | jq
+	else
+		echo "$container_config"
+	fi
+}
+
 function usage() {
 	local reset blue
 
@@ -26,6 +55,9 @@ function usage() {
 		Usage: devine [command] [args...]
 
 		Subcommands:
+		    ${blue}devine read-configuration$reset
+		      read the devcontainer configuration from .devcontainer
+
 		    ${blue}devine version$reset
 		      print the version number of devine and exit
 	EOF
@@ -47,6 +79,7 @@ function main() {
 	local cmd=$1
 	shift
 	case "$cmd" in
+		read-config | read-configuration) read-configuration "$@" ;;
 		-v | v | version) echo "$DEVINE_VERSION" ;;
 		*)
 			usage >&2
