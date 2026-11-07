@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# devine - a friendly wrapper around devcontainer-cli
+# devine - a divine devcontainer cli
+#
+# A friendly wrapper around devcontainer-cli, designed for terminal-based workflows
 #
 # Developed on Ubuntu 24.04
 #

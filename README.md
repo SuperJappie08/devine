@@ -1,5 +1,7 @@
 # `devine`
-> A better (wrapper) around `devcontainer-cli`
+> A divine devcontainer cli
+
+`devine` is friendly wrapper around `devcontainer-cli`, designed for terminal-based workflows.
 
 ## Development
 This repo uses pre-commit, with gitlint which requires an extra hook to be installed:
