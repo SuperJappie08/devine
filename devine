@@ -13,6 +13,56 @@ function use-color() {
 	[[ -z $NO_COLOR ]]
 }
 
+function get-devcontainer-json() {
+	# TODO(SuperJappie08): Flags to implement
+	#  - --workspace-folder
+	#  - --container-id
+	#  - ? --id-label ?
+	#  - --config
+	#  - --override-config
+	#  - --include-features-configuration
+	#  - --include-merged-configuration
+	#  - --additional-features
+	local devcontainer_config exit_code
+	devcontainer_config="$(devcontainer read-configuration "$@")"
+	exit_code=$?
+
+	# TODO(SuperJappie08): Color here
+	if ((exit_code)); then
+		echo "[ERROR] devcontainer cli failed!" >&2
+		printf "%s\n" "$devcontainer_config" >&2
+		exit $exit_code
+	fi
+
+	echo "$devcontainer_config" | tail -n +2
+}
+
+# Retrieve a key from the devcontainer config
+function get-devcontainer-config-value() {
+	local devcontainer_config result
+	devcontainer_config="$1"
+	local key="$2"
+	local default="$3"
+
+	if ! result=$(echo "$devcontainer_config" | jq -re "$key"); then
+		echo "$default"
+	else
+		echo "$result"
+	fi
+}
+
+function get-container-name() {
+	get-devcontainer-config-value "$1" '.configuration.name'
+}
+
+function get-devine-shell() {
+	local shell
+	shell=$(get-devcontainer-config-value "$1" '.configuration.customizations.devine.shell' "${SHELL##*/}")
+	echo "${shell:-bash}"
+}
+
+### Commands
+
 function read-configuration {
 	# TODO(SuperJappie08): Flags to implement
 	#  - --workspace-folder
@@ -23,23 +73,40 @@ function read-configuration {
 	#  - --include-features-configuration
 	#  - --include-merged-configuration
 	#  - --additional-features
-	local container_config exit_code
-	container_config="$(devcontainer read-configuration "$@")"
-	exit_code=$?
+	local devcontainer_config
+	devcontainer_config=$(get-devcontainer-json "$@") || exit $?
 
-	# TODO(SuperJappie08): Color here
-	if ((exit_code)); then
-		echo "[ERROR] devcontainer cli failed!"
-		printf "%s\n" "$container_config"
-		exit $exit_code
-	fi
-
-	container_config=$(echo "$container_config" | tail -n +2)
+	# TODO: Make this option
 	if which jq &>/dev/null; then
-		echo "$container_config" | jq
+		echo "$devcontainer_config" | jq
 	else
-		echo "$container_config"
+		echo "$devcontainer_config"
 	fi
+}
+
+function up() {
+	# TODO(SuperJappie08): Everything
+	exec devcontainer up "$@"
+}
+
+function shell() {
+	# TODO(SuperJappie08): Everything
+	local container_name devcontainer_config shell workspace_folder
+	devcontainer_config=$(get-devcontainer-json "$@") || exit $?
+	container_name=$(get-container-name "$devcontainer_config")
+	shell=$(get-devine-shell "$devcontainer_config")
+	workspace_folder=$(get-devcontainer-config-value "$devcontainer_config" ".workspace.workspaceFolder")
+
+	# NOTE: `devcontainer exec` theoretically is more flexible,
+	#        however it can crash due to devcontainer-cli issues
+
+	# FIXME(SuperJappie08): Make this work with docker compose and other runtimes
+	# TODO(SuperJappie08): Pass other envs/make customizable
+	exec docker exec \
+		-e COLORTERM="$COLORTERM" \
+		-e TERM="$TERM" \
+		-w "$workspace_folder" \
+		-it "$container_name" "${shell}" -il
 }
 
 function usage() {
@@ -51,12 +118,18 @@ function usage() {
 	fi
 
 	cat <<-EOF
-		${blue}devine$reset - A better devcontainer-cli interface - ($DEVINE_VERSION)
+		${blue}devine$reset - A divine devcontainer cli - ($DEVINE_VERSION)
 		Usage: devine [command] [args...]
 
 		Subcommands:
 		    ${blue}devine read-configuration$reset
 		      read the devcontainer configuration from .devcontainer
+
+		    ${blue}devine up$reset
+		      create and run devcontainer
+
+		    ${blue}devine shell$reset
+		      start a shell inside of the devcontainer
 
 		    ${blue}devine version$reset
 		      print the version number of devine and exit
@@ -64,22 +137,29 @@ function usage() {
 }
 
 function main() {
-	local red reset
+	local red reset yellow
 
 	if use-color; then
 		reset=$(tput sgr0 2>/dev/null)
 		red=$(tput setaf 1 bold 2>/dev/null)
+		yellow=$(tput setaf 3 bold 2>/dev/null)
 	fi
 
 	if ! which devcontainer &>/dev/null; then
-		echo "${red}[ERROR]${reset} devcontainer executable is required!"
+		echo "${red}[ERROR]${reset} devcontainer executable is required!" >&2
 		exit 99
+	fi
+
+	if ! which jq &>/dev/null; then
+		echo "${yellow}[WARN]${reset} jq executable is missing!" >&2
 	fi
 
 	local cmd=$1
 	shift
 	case "$cmd" in
 		read-config | read-configuration) read-configuration "$@" ;;
+		up) up "$@" ;;
+		shell) shell "$@" ;;
 		-v | v | version) echo "$DEVINE_VERSION" ;;
 		*)
 			usage >&2
